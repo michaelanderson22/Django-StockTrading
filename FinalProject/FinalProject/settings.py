@@ -123,3 +123,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 LOGIN_REDIRECT_URL = '/userportfolio'
+
+ALPHA_VANTAGE_API_KEY = 'ZPEUYOBKJGXC1W8F'
