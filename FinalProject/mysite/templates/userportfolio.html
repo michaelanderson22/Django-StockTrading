@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+{% block body %}
+    <div class="d-flex flex-column pt-4 align-items-center">
+        {% if user.is_authenticated %}
+
+
+        {% else %}
+            <h3>Please
+                <a href="{% url 'login' %}">Login</a>
+              or
+              <a href="{% url 'register' %}">Register</a>
+                for an Account to view your Portfolio.
+            </h3>
+
+        {% endif %}
+
+
+    </div>
+
+{% endblock %}
+</body>
+</html>

@@ -11,11 +11,24 @@
 </head>
 <body>
 {% block body %}
+    <div class="d-flex flex-column pt-4 align-items-center">
+        {% if user.is_authenticated %}
 
-    <div class="d-flex flex-column pt-4 align-items-center"> <!--start flex-->
-        <h1 class="display-4 pb-2">Welcome to my Portfolio Home Page</h1>
+
+        {% else %}
+            <h3>Welcome! If you'd like to start trading stocks, please
+                <a href="{% url 'login' %}">Login</a>
+              or
+              <a href="{% url 'register' %}">Register</a>
+                for an account!
+            </h3>
+
+        {% endif %}
+
 
     </div>
+
+
 
 {% endblock %}
 </body>

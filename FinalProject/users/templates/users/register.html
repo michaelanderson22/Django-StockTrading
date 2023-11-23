@@ -1,5 +1,59 @@
-<form method="POST">
+{% extends 'base.html' %}
+
+{% block body %}
+
+<form method="post" action="{% url 'register' %}">
     {% csrf_token %}
-    {{ form }}
-    <button type="submit">Signup</button>
+    <section class="mt-5" style="background-color: white">
+        <div class="container py-5 h-100">
+            <div class="row d-flex justify-content-center align-items-center h-100">
+                <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+                    <div class="card shadow-2-strong" style="border-radius: 1rem;">
+                        <div class="card-body p-5 text-center">
+
+                            <h3 class="mb-5">Register</h3>
+
+                            <div class="form-group row">
+                                <label for="{{ form.username.id_for_label }}" class="col-sm-3 col-form-label">Username:</label>
+                                <div class="col-sm-9">
+                                    {{ form.username }}
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="{{ form.email.id_for_label }}" class="col-sm-3 col-form-label">Email:</label>
+                                <div class="col-sm-9">
+                                    {{ form.email }}
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="{{ form.password1.id_for_label }}" class="col-sm-3 col-form-label">Password:</label>
+                                <div class="col-sm-9">
+                                    {{ form.password1 }}
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="{{ form.password2.id_for_label }}" class="col-sm-3 col-form-label">Confirm Password:</label>
+                                <div class="col-sm-9">
+                                    {{ form.password2 }}
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary btn-lg btn-block" type="submit">Register</button>
+
+                            <div>
+                                <p class="mb-0">Already have an account?</p>
+                                <a href="{% url 'login' %}" class="text-grey-50 fw-bold">Login</a>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </form>
+
+{% endblock %}
