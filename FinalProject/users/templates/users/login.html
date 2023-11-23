@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<Form class="mt-2" method="POST">
+    {% csrf_token %}
+    {{ form }}
+    <button type="submit">Login</button>
+</Form>
+{% endblock %}
+
