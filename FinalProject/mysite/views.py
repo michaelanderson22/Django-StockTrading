@@ -4,6 +4,7 @@ from django.conf import settings
 from django.utils import timezone
 import requests
 from requests.exceptions import HTTPError
+from datetime import datetime
 
 
 # Create your views here.
@@ -19,30 +20,36 @@ def HomePage(request):
 
             # Only make an API call if it's been more than a day since the last update or no previous update exists
             if not last_update_time or (timezone.now() - last_update_time.last_updated).days > 0:
-                url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}'
+                url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
                 response = requests.get(url)
                 response.raise_for_status()  # Raise an exception for bad responses
 
                 data = response.json()
-                time_series = data.get('Time Series (Daily)', {})
+                print(data)
+                time_series = data.get('Global Quote', {})
 
-                for date, info in time_series.items():
+                # Extracting the date from the response
+                date = time_series.get('07. latest trading day', None)
+
+                if date:
                     # Check if a record with the same symbol and date already exists
                     existing_stock = Stock.objects.filter(symbol=symbol, last_updated=date).first()
 
                     if existing_stock:
                         # Update existing record
-                        existing_stock.current_price = float(info['1. price'])
-                        existing_stock.change_percent = float(info['2. change percent'])
-                        existing_stock.last_updated = date
+                        existing_stock.current_price = float(time_series.get('05. price', 0))
+                        existing_stock.change_percent = time_series.get('10. change percent',
+                                                                        '0%')  # Default to '0%' if not provided
+                        existing_stock.last_updated = timezone.make_aware(datetime.strptime(date, '%Y-%m-%d'))
                         existing_stock.save()
                     else:
                         # Create a new record
                         stock = Stock(
                             symbol=symbol,
-                            current_price=float(info['1. price']),
-                            change_percent=float(info['2. change percent']),
-                            last_updated=date,
+                            current_price=float(time_series.get('05. price', 0)),
+                            change_percent=time_series.get('10. change percent', '0%'),
+                            # Default to '0%' if not provided
+                            last_updated=timezone.make_aware(datetime.strptime(date, '%Y-%m-%d')),
                         )
                         stock.save()
 
