@@ -1,9 +1,10 @@
-from django.shortcuts import render
-from .models import Stock
+from django.shortcuts import render, redirect
+from .models import *
 from django.conf import settings
 from django.utils import timezone
 import requests
 from requests.exceptions import HTTPError
+from .forms import AddFundsForm
 from datetime import datetime
 
 
@@ -62,8 +63,20 @@ def HomePage(request):
 
 
 def AddFunds(request):
-    context = {}
-    return render(request, 'addfunds.html')
+    user_profile = UserProfile.objects.get(user=request.user)
+
+    if request.method == 'POST':
+        form = AddFundsForm(request.POST)
+        if form.is_valid():
+            # Update the user's funds
+            amount = form.cleaned_data['amount']
+            user_profile.funds += amount
+            user_profile.save()
+            return redirect('mysite:User Portfolio')
+    else:
+        form = AddFundsForm()
+
+    return render(request, 'addfunds.html', {'form': form})
 
 
 def UserPortfolio(request):
