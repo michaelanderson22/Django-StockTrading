@@ -19,8 +19,8 @@ def HomePage(request):
             # Check the last update timestamp for the stock
             last_update_time = Stock.objects.filter(symbol=symbol).order_by('-last_updated').first()
 
-            # Only make an API call if it's been more than a day since the last update and you have responses left
-            if last_update_time and (timezone.now() - last_update_time.last_updated).days > 0:
+            # Only make an API call if it's been more than two days since the last update and you have responses left
+            if last_update_time and (timezone.now() - last_update_time.last_updated).days > 1:
                 print((timezone.now() - last_update_time.last_updated).days)
 
                 url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
@@ -34,8 +34,8 @@ def HomePage(request):
                 # Check if a record with the same symbol already exists
                 existing_stock = Stock.objects.filter(symbol=symbol).first()
 
-                # Check if it's been more than a day since the last update
-                if existing_stock and (timezone.now() - existing_stock.last_updated).days > 0:
+                # Check if it's been more than two days since the last update
+                if existing_stock and (timezone.now() - existing_stock.last_updated).days > 1:
                     # Update existing record
                     existing_stock.current_price = float(time_series.get('05. price', 0))
                     existing_stock.change_percent = time_series.get('10. change percent', '0%')

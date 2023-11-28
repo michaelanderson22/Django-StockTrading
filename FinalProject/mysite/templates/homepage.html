@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load tag_library %}
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,8 +16,37 @@
     <div class="d-flex flex-column pt-4 align-items-center">
         {% if user.is_authenticated %}
 
+            <h1>Available Stocks</h1>
+
+            {% for stock in stocks %}
+
+                <div class="card w-50 mt-3">
+                  <h5 class="card-header">{{ stock.symbol }}</h5>
+                  <div class="card-body">
+                    <h5 class="">Current Price: ${{ stock.current_price }}</h5>
+                    {% with change_percent_float=stock.change_percent|slice:"-1"|to_float %}
+                      {% if change_percent_float >= 0 %}
+                          <p class="card-tex text-success">Change Percentage: {{ change_percent_float }}%</p>
+                      {% elif change_percent_float < 0 %}
+                        <p class="card-text text-danger">Change Percentage: {{ change_percent_float }}%</p>
+                      {% endif %}
+                    {% endwith %}
+                    <p class="card-text mb-3">Last Updated: {{ stock.last_updated }}</p>
+                    <form>
+                        <div class="d-flex flex-row">
+                            <input class="btn btn-primary" type="submit" value="Buy Shares">
+                            <div class="form-outline ms-3 mt-1" style="width: 5rem;">
+                                <input value="0" type="number" id="typeNumber" class="form-control" />
+                            </div>
+                            <label class="form-label ms-3 mt-2" for="typeNumber"># of Shares</label>
+                        </div>
+                    </form>
+                  </div>
+                </div>
 
 
+
+            {% endfor %}
         {% else %}
             <h3>Welcome! If you'd like to start trading stocks, please
                 <a href="{% url 'login' %}">Login</a>
