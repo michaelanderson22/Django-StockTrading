@@ -11,6 +11,9 @@ from datetime import datetime
 # Create your views here.
 
 def HomePage(request):
+    user_profile = UserProfile.objects.get(user=request.user)
+    funds = user_profile.funds
+
     api_key = settings.ALPHA_VANTAGE_API_KEY
     symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'GOOGL', 'NVDA', 'META', 'TSLA', 'LLY', 'TSM', 'WMT', 'JNJ', 'ORCL',
                'HD', 'ADBE', 'COST', 'KO', 'TM', 'BAC', 'PEP']  # Add more stock symbols as needed
@@ -59,7 +62,7 @@ def HomePage(request):
 
     stocks = Stock.objects.all()
 
-    return render(request, 'homepage.html', {'stocks': stocks})
+    return render(request, 'homepage.html', {'stocks': stocks, 'funds': funds})
 
 
 def AddFunds(request):
@@ -80,5 +83,7 @@ def AddFunds(request):
 
 
 def UserPortfolio(request):
-    context = {}
-    return render(request, 'userportfolio.html')
+    user_profile = UserProfile.objects.get(user=request.user)
+    funds = user_profile.funds
+
+    return render(request, 'userportfolio.html', {'funds': funds})
