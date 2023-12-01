@@ -125,3 +125,18 @@ MEDIA_URL = '/media/'
 LOGIN_REDIRECT_URL = '/userportfolio'
 
 ALPHA_VANTAGE_API_KEY = 'ZPEUYOBKJGXC1W8F'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',  # Adjust the level as needed
+    },
+}

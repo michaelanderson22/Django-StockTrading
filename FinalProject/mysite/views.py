@@ -1,18 +1,25 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from .models import *
 from django.conf import settings
 from django.utils import timezone
 import requests
 from requests.exceptions import HTTPError
-from .forms import AddFundsForm
+from .forms import AddFundsForm, StockTransactionForm
+from decimal import Decimal
 from datetime import datetime
+from django.shortcuts import get_object_or_404
+from django.contrib import messages
 
 
 # Create your views here.
 
 def HomePage(request):
-    user_profile = UserProfile.objects.get(user=request.user)
-    funds = user_profile.funds
+    funds = 0  # For anonymous user
+
+    if request.user.is_authenticated:
+        user_profile = UserProfile.objects.get(user=request.user)
+        funds = user_profile.funds
 
     api_key = settings.ALPHA_VANTAGE_API_KEY
     symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'GOOGL', 'NVDA', 'META', 'TSLA', 'LLY', 'TSM', 'WMT', 'JNJ', 'ORCL',
@@ -22,6 +29,7 @@ def HomePage(request):
         try:
             # Check the last update timestamp for the stock
             last_update_time = Stock.objects.filter(symbol=symbol).order_by('-last_updated').first()
+            last_update_time = 0
 
             # Only make an API call if it's been more than two days since the last update and you have responses left
             if last_update_time and (timezone.now() - last_update_time.last_updated).days > 1:
@@ -61,8 +69,10 @@ def HomePage(request):
             print(f"Error fetching data for {symbol}: {e}")
 
     stocks = Stock.objects.all()
+    stock_forms = [StockTransactionForm(prefix=str(stock.id)) for stock in stocks]
+    stocks_and_forms = zip(stocks, stock_forms)
 
-    return render(request, 'homepage.html', {'stocks': stocks, 'funds': funds})
+    return render(request, 'homepage.html', {'stocks': stocks, 'funds': funds, 'stocks_and_forms': stocks_and_forms})
 
 
 def AddFunds(request):
@@ -86,4 +96,106 @@ def UserPortfolio(request):
     user_profile = UserProfile.objects.get(user=request.user)
     funds = user_profile.funds
 
-    return render(request, 'userportfolio.html', {'funds': funds})
+    # Fetch the user's stock portfolio directly
+    stock_portfolio = StockPortfolio.objects.get(user=user_profile.user)
+
+    # Fetch the portfolio stocks related to the user's stock portfolio
+    portfolio_stocks = PortfolioStock.objects.filter(portfolio=stock_portfolio)
+
+    # Calculate the value of each stock and add it to the portfolio_stocks queryset
+    for stock in portfolio_stocks:
+        stock.value = stock.quantity * stock.stock.current_price
+
+    stock_forms = [StockTransactionForm(prefix=str(stock.id)) for stock in portfolio_stocks]
+    stocks_and_forms = zip(portfolio_stocks, stock_forms)
+
+    return render(request, 'userportfolio.html',
+                  {'funds': funds, 'user_stocks': portfolio_stocks, 'stocks_and_forms': stocks_and_forms})
+
+
+def calculate_total_cost(price, quantity):
+    return Decimal(price) * Decimal(quantity)
+
+
+def buy_stock(request, stock_symbol):
+    stock = Stock.objects.get(symbol=stock_symbol)
+    user_profile = UserProfile.objects.get(user=request.user)
+    stock_portfolio = StockPortfolio.objects.get(user=user_profile.user)
+
+    if request.method == 'POST':
+        form = StockTransactionForm(request.POST, prefix=str(stock.id))
+        if form.is_valid():
+            quantity = form.cleaned_data['quantity']
+
+            # Calculate the cost of the stocks and update funds
+            total_cost = calculate_total_cost(stock.current_price, quantity)
+
+            if user_profile.funds >= total_cost:
+                # Get or create the PortfolioStock entry with the initial quantity
+                portfolio_stock, created = PortfolioStock.objects.get_or_create(
+                    portfolio=stock_portfolio, stock=stock,
+                    defaults={'quantity': quantity}
+                )
+
+                if not created:
+                    # If the portfolio stock already exists, update the quantity
+                    portfolio_stock.quantity += quantity
+                    portfolio_stock.save()
+
+                user_profile.funds -= total_cost
+                user_profile.save()
+
+                # Redirect user to their portfolio if the purchase is successful.
+                return redirect('mysite:User Portfolio')
+            else:
+                messages.error(request, 'Insufficient Funds.')
+                form.add_error('quantity', 'Insufficient funds.')
+
+    else:
+        form = StockTransactionForm()
+
+    # If the form is not valid or it's a GET request, render the template with the form
+    return redirect('mysite:Home Page')
+
+
+@login_required
+def sell_stock(request, stock_symbol):
+    user_profile = UserProfile.objects.get(user=request.user)
+
+    # Fetch the user's stock portfolio directly
+    stock_portfolio = StockPortfolio.objects.get(user=user_profile.user)
+
+    # Fetch the specific portfolio stock related to the user's stock portfolio and the given stock symbol
+    portfolio_stock = get_object_or_404(PortfolioStock, portfolio=stock_portfolio, stock__symbol=stock_symbol)
+
+    if request.method == 'POST':
+        form = StockTransactionForm(request.POST, prefix=str(portfolio_stock.id))
+        if form.is_valid():
+            quantity = form.cleaned_data['quantity']
+
+            # Calculate the value of the stocks and update funds
+            total_value = calculate_total_cost(portfolio_stock.stock.current_price, quantity)
+
+            if portfolio_stock.quantity >= quantity:
+                # Reduce the quantity of the stock
+                portfolio_stock.quantity -= quantity
+                portfolio_stock.save()
+
+                # Update user funds
+                user_profile.funds += total_value
+                user_profile.save()
+
+                # Remove the stock from the portfolio if its quantity reaches zero
+                if portfolio_stock.quantity == 0:
+                    portfolio_stock.delete()
+
+                # Redirect user to their portfolio if the sale is successful.
+                return redirect('mysite:User Portfolio')
+            else:
+                messages.error(request, 'Insufficient Shares.')
+                form.add_error('quantity', 'Insufficient Shares.')
+    else:
+        form = StockTransactionForm()
+
+    # If the form is not valid or it's a GET request, render the template with the form
+    return redirect('mysite:User Portfolio')

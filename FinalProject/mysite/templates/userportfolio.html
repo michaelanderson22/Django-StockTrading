@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load tag_library %}
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -15,6 +17,42 @@
         {% if user.is_authenticated %}
             <h3>Your Portfolio</h3>
             <h5>Current Liquid Funds: {{ funds }}$</h5>
+
+            {% for stock, stock_form in stocks_and_forms %}
+
+                <div class="card w-50 mt-3">
+                  <h5 class="card-header">{{ stock.stock.symbol }}</h5>
+                  <div class="card-body">
+                    <h5 class="">Current Price: ${{ stock.stock.current_price }}</h5>
+                    {% with change_percent_float=stock.stock.change_percent|slice:"-1"|to_float%}
+                      {% if change_percent_float >= 0 %}
+                          <p class="card-tex text-success">Change Percentage: {{ change_percent_float }}%</p>
+                      {% elif change_percent_float < 0 %}
+                        <p class="card-text text-danger">Change Percentage: {{ change_percent_float }}%</p>
+                      {% endif %}
+                    {% endwith %}
+                    <p class="card-text">Last Updated: {{ stock.stock.last_updated }}</p>
+                  <p class="card-text">Shares Owned: {{ stock.quantity }}</p>
+                      <p class="card-text mb-3">Total Value: <b>${{ stock.value }}</b></p>
+                  <form method="post" action="{% url 'mysite:sell_stock' stock.stock.symbol %}">
+                        {% csrf_token %}
+                        <div class="d-flex flex-row">
+                            <input class="btn btn-primary" type="submit" value="Sell Shares">
+                            <div class="ms-2 mt-2">
+                                {{ stock_form.quantity.label_tag }}  {# Render the label here #}
+                            </div>
+                            <div class="ms-2 mt-2">
+                                {{ stock_form.quantity }}  {# Render the input field here #}
+                            </div>
+                            <input type="hidden" name="stock_symbol" value="{{ stock.symbol }}">
+                        </div>
+                    </form>
+                  </div>
+                </div>
+
+
+
+            {% endfor %}
 
 
 
