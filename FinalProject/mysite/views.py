@@ -29,7 +29,6 @@ def HomePage(request):
         try:
             # Check the last update timestamp for the stock
             last_update_time = Stock.objects.filter(symbol=symbol).order_by('-last_updated').first()
-            last_update_time = 0
 
             # Only make an API call if it's been more than two days since the last update and you have responses left
             if last_update_time and (timezone.now() - last_update_time.last_updated).days > 1:
@@ -76,41 +75,48 @@ def HomePage(request):
 
 
 def AddFunds(request):
-    user_profile = UserProfile.objects.get(user=request.user)
+    if request.user.is_authenticated:
 
-    if request.method == 'POST':
-        form = AddFundsForm(request.POST)
-        if form.is_valid():
-            # Update the user's funds
-            amount = form.cleaned_data['amount']
-            user_profile.funds += amount
-            user_profile.save()
-            return redirect('mysite:User Portfolio')
+        user_profile = UserProfile.objects.get(user=request.user)
+
+        if request.method == 'POST':
+            form = AddFundsForm(request.POST)
+            if form.is_valid():
+                # Update the user's funds
+                amount = form.cleaned_data['amount']
+                user_profile.funds += amount
+                user_profile.save()
+                return redirect('mysite:User Portfolio')
+        else:
+            form = AddFundsForm()
+
+        return render(request, 'addfunds.html', {'form': form})
     else:
-        form = AddFundsForm()
-
-    return render(request, 'addfunds.html', {'form': form})
+        return render(request,'addfunds.html', {})
 
 
 def UserPortfolio(request):
-    user_profile = UserProfile.objects.get(user=request.user)
-    funds = user_profile.funds
+    if request.user.is_authenticated:
+        user_profile = UserProfile.objects.get(user=request.user)
+        funds = user_profile.funds
 
-    # Fetch the user's stock portfolio directly
-    stock_portfolio = StockPortfolio.objects.get(user=user_profile.user)
+        # Fetch the user's stock portfolio directly
+        stock_portfolio = StockPortfolio.objects.get(user=user_profile.user)
 
-    # Fetch the portfolio stocks related to the user's stock portfolio
-    portfolio_stocks = PortfolioStock.objects.filter(portfolio=stock_portfolio)
+        # Fetch the portfolio stocks related to the user's stock portfolio
+        portfolio_stocks = PortfolioStock.objects.filter(portfolio=stock_portfolio)
 
-    # Calculate the value of each stock and add it to the portfolio_stocks queryset
-    for stock in portfolio_stocks:
-        stock.value = stock.quantity * stock.stock.current_price
+        # Calculate the value of each stock and add it to the portfolio_stocks queryset
+        for stock in portfolio_stocks:
+            stock.value = stock.quantity * stock.stock.current_price
 
-    stock_forms = [StockTransactionForm(prefix=str(stock.id)) for stock in portfolio_stocks]
-    stocks_and_forms = zip(portfolio_stocks, stock_forms)
+        stock_forms = [StockTransactionForm(prefix=str(stock.id)) for stock in portfolio_stocks]
+        stocks_and_forms = zip(portfolio_stocks, stock_forms)
 
-    return render(request, 'userportfolio.html',
-                  {'funds': funds, 'user_stocks': portfolio_stocks, 'stocks_and_forms': stocks_and_forms})
+        return render(request, 'userportfolio.html',
+                      {'funds': funds, 'user_stocks': portfolio_stocks, 'stocks_and_forms': stocks_and_forms})
+    else:
+        return render(request, 'userportfolio.html', {})
 
 
 def calculate_total_cost(price, quantity):
